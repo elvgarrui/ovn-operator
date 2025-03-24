@@ -23,6 +23,7 @@ EnableChassisAsGateway=${EnableChassisAsGateway:-true}
 PhysicalNetworks=${PhysicalNetworks:-""}
 OVNHostName=${OVNHostName:-""}
 DB_FILE=/etc/openvswitch/conf.db
+EXECUTE_VSWITCHD_SCRIPT=/usr/local/bin/container-scripts/execute-vswitchd.sh
 
 ovs_dir=/var/lib/openvswitch
 FLOWS_RESTORE_SCRIPT=$ovs_dir/flows-script
