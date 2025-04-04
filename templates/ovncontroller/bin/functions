@@ -23,7 +23,6 @@ EnableChassisAsGateway=${EnableChassisAsGateway:-true}
 PhysicalNetworks=${PhysicalNetworks:-""}
 OVNHostName=${OVNHostName:-""}
 DB_FILE=/etc/openvswitch/conf.db
-EXECUTE_VSWITCHD_SCRIPT=/usr/local/bin/container-scripts/execute-vswitchd.sh
 
 ovs_dir=/var/lib/openvswitch
 FLOWS_RESTORE_SCRIPT=$ovs_dir/flows-script
@@ -35,8 +34,10 @@ function cleanup_ovsdb_server_semaphore() {
 }
 
 function cleanup_flows_backup() {
+    rc_code=$?
     rm -f $FLOWS_RESTORE_SCRIPT 2>&1 > /dev/null
     rm -rf $FLOWS_RESTORE_DIR 2>&1 > /dev/null
+    echo "Exited with rc $rc_code"
 }
 
 function wait_for_ovsdb_server {
