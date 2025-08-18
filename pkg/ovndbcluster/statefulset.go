@@ -186,7 +186,7 @@ func StatefulSet(
 
 	// https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#persistentvolumeclaim-retention
 	statefulset.Spec.PersistentVolumeClaimRetentionPolicy = &appsv1.StatefulSetPersistentVolumeClaimRetentionPolicy{
-		WhenDeleted: appsv1.DeletePersistentVolumeClaimRetentionPolicyType,
+		WhenDeleted: appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
 		WhenScaled:  appsv1.RetainPersistentVolumeClaimRetentionPolicyType,
 	}
 
