@@ -52,6 +52,29 @@ spec:
           spec:
             description: OVNControllerSpec defines the desired state of OVNController
             properties:
+              bondConfiguration:
+                description: List of bonds to configure and their settings
+                items:
+                  description: Bond is used for configuring the bond-cni if needed
+                    on the deployment
+                  properties:
+                    links:
+                      default: []
+                      items:
+                        type: string
+                      type: array
+                      x-kubernetes-list-type: set
+                    mode:
+                      default: active-backup
+                      type: string
+                    name:
+                      default: bond0
+                      type: string
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - name
+                x-kubernetes-list-type: map
               external-ids:
                 default: {}
                 description: OVSExternalIDs is a set of configuration options for

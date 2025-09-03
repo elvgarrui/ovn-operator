@@ -15,6 +15,7 @@ package ovncontroller
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	netattdefv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -32,65 +33,135 @@ func CreateOrUpdateAdditionalNetworks(
 	instance *ovnv1.OVNController,
 	labels map[string]string,
 ) ([]string, error) {
-
-	var nad *netattdefv1.NetworkAttachmentDefinition
 	var networkAttachments []string
 
 	for physNet, interfaceName := range instance.Spec.NicMappings {
-		nadSpec := netattdefv1.NetworkAttachmentDefinitionSpec{
-			Config: fmt.Sprintf(
-				`{"cniVersion": "0.3.1", "name": "%s", "type": "host-device", "device": "%s"}`,
-				physNet, interfaceName),
-		}
-		nad = &netattdefv1.NetworkAttachmentDefinition{}
-		err := h.GetClient().Get(
-			ctx,
-			client.ObjectKey{
-				Namespace: instance.Namespace,
-				Name:      physNet,
-			},
-			nad,
-		)
+		nadConfig := defineNADSpecConfig(physNet, interfaceName)
+		err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, labels, physNet, nadConfig)
 		if err != nil {
-			if !k8s_errors.IsNotFound(err) {
-				return nil, fmt.Errorf("cannot get NetworkAttachmentDefinition %s/%s: %w",
-					physNet, interfaceName, err)
-			}
-
-			ownerRef := metav1.NewControllerRef(instance, instance.GroupVersionKind())
-			nad = &netattdefv1.NetworkAttachmentDefinition{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            physNet,
-					Namespace:       instance.Namespace,
-					Labels:          labels,
-					OwnerReferences: []metav1.OwnerReference{*ownerRef},
-				},
-				Spec: nadSpec,
-			}
-			// Request object not found, lets create it
-			if err := h.GetClient().Create(ctx, nad); err != nil {
-				return nil, fmt.Errorf("cannot create NetworkAttachmentDefinition %s/%s: %w",
-					physNet, interfaceName, err)
-			}
-		} else {
-			owned := false
-			for _, owner := range nad.GetOwnerReferences() {
-				if owner.Name == instance.Name {
-					owned = true
-					break
-				}
-			}
-			if owned {
-				nad.Spec = nadSpec
-				if err := h.GetClient().Update(ctx, nad); err != nil {
-					return nil, fmt.Errorf("cannot update NetworkAttachmentDefinition %s/%s: %w",
-						physNet, interfaceName, err)
-				}
-			}
+			return nil, err
 		}
-
 		networkAttachments = append(networkAttachments, physNet)
 	}
 
 	return networkAttachments, nil
+}
+
+// CreateOrUpdateBonsNADs - create NADs for bond members and for bond
+func CreateOrUpdateBondNADs(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *ovnv1.OVNController,
+) ([]string, error) {
+	var networkAttachments []string
+
+	for _, bond := range instance.Spec.BondConfiguration {
+		var linkNames []string
+		for i, interfaceName := range bond.Links {
+			memberName := bond.Name + "-member" + strconv.Itoa(i)
+			linkNames = append(linkNames, memberName)
+			//(WIP) is nil ok or should I assign labels to it?
+			nadConfig := defineNADSpecConfig(memberName, interfaceName)
+			err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, nil, memberName, nadConfig)
+			if err != nil {
+				return nil, err
+			}
+			networkAttachments = append(networkAttachments, memberName)
+		}
+		mainBondNadConfig := defineMainBondNADSpecConfig(bond.Name, bond.Mode, linkNames)
+		err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, nil, bond.Name, mainBondNadConfig)
+		if err != nil {
+			return nil, err
+		}
+		networkAttachments = append(networkAttachments, bond.Name)
+	}
+	return networkAttachments, nil
+}
+
+func defineNADSpecConfig(
+	physNet string,
+	interfaceName string,
+) string {
+	return fmt.Sprintf(
+		`{"cniVersion": "0.3.1", "name": "%s", "type": "host-device", "device": "%s"}`,
+		physNet, interfaceName)
+}
+
+func defineMainBondNADSpecConfig(
+	physNet string,
+	mode string,
+	links []string,
+) string {
+	linkNames := `[`
+	for i, link := range links {
+		linkNames = linkNames + fmt.Sprintf(`{"name": "%s"}`, link)
+		if i < len(links)-1 {
+			linkNames = linkNames + ", "
+		}
+	}
+	linkNames = linkNames + `]`
+
+	return fmt.Sprintf(
+		`{"cniVersion": "0.3.1","name": "%s", "type": "bond", "mode": "%s", "failOverMac": 1, "linksInContainer": true, "miimon": "100", "mtu": 1500, "links": %s}`,
+		physNet, mode, linkNames)
+}
+
+func createOrUpdateNetworkAttachmentDefinition(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *ovnv1.OVNController,
+	labels map[string]string,
+	physNet string,
+	nadSpecConfig string,
+) error {
+	var nad *netattdefv1.NetworkAttachmentDefinition
+
+	nadSpec := netattdefv1.NetworkAttachmentDefinitionSpec{
+		Config: nadSpecConfig,
+	}
+	nad = &netattdefv1.NetworkAttachmentDefinition{}
+	err := h.GetClient().Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: instance.Namespace,
+			Name:      physNet,
+		},
+		nad,
+	)
+	if err != nil {
+		if !k8s_errors.IsNotFound(err) {
+			return fmt.Errorf("cannot get NetworkAttachmentDefinition %s: %w", nadSpecConfig, err)
+		}
+
+		ownerRef := metav1.NewControllerRef(instance, instance.GroupVersionKind())
+		nad = &netattdefv1.NetworkAttachmentDefinition{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            physNet,
+				Namespace:       instance.Namespace,
+				Labels:          labels,
+				OwnerReferences: []metav1.OwnerReference{*ownerRef},
+			},
+			Spec: nadSpec,
+		}
+		// Request object not found, lets create it
+		if err := h.GetClient().Create(ctx, nad); err != nil {
+			return fmt.Errorf("cannot create NetworkAttachmentDefinition %s: %w", nadSpecConfig, err)
+		}
+	} else {
+		owned := false
+		for _, owner := range nad.GetOwnerReferences() {
+			if owner.Name == instance.Name {
+				owned = true
+				break
+			}
+		}
+		if owned {
+			nad.Spec = nadSpec
+			if err := h.GetClient().Update(ctx, nad); err != nil {
+				return fmt.Errorf("cannot update NetworkAttachmentDefinition %s: %w", nadSpecConfig, err)
+			}
+		}
+	}
+
+	return nil
 }

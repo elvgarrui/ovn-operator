@@ -503,6 +503,21 @@ func (r *OVNControllerReconciler) reconcileNormal(ctx context.Context, instance 
 		return ctrl.Result{}, err
 	}
 
+	// Create or update any bond configuration
+	bondNADs, err := ovncontroller.CreateOrUpdateBondNADs(ctx, helper, instance)
+	if err != nil {
+		Log.Info(fmt.Sprintf("Failed to create additional networks for bond: %s", err))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.NetworkAttachmentsReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.NetworkAttachmentsReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	networkAttachments = append(networkAttachments, bondNADs...)
+
 	// network to attach to
 	networkAttachmentsNoPhysNet := []string{}
 	if instance.Spec.NetworkAttachment != "" {
