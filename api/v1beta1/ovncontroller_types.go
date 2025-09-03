@@ -70,6 +70,13 @@ type OVNControllerSpecCore struct {
 	NicMappings map[string]string `json:"nicMappings,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +listType=map
+	// +listMapKey=name
+	// +optional
+	// List of bonds to configure and their settings
+	BondConfiguration []Bond `json:"bondConfiguration,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// Resources - Compute Resources required by this service (Limits/Requests).
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
@@ -180,6 +187,22 @@ type OVSExternalIDs struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=true
 	EnableChassisAsGateway *bool `json:"enable-chassis-as-gateway"`
+}
+
+// Bond is used for configuring the bond-cni if needed on the deployment
+type Bond struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="bond0"
+	Name string `json:"name"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="active-backup"
+	Mode string `json:"mode,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +listType=set
+	// +kubebuilder:default={}
+	Links []string `json:"links,omitempty"`
 }
 
 // RbacConditionsSet - set the conditions for the rbac object
