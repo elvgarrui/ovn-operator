@@ -70,11 +70,9 @@ type OVNControllerSpecCore struct {
 	NicMappings map[string]string `json:"nicMappings,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +listType=map
-	// +listMapKey=name
 	// +optional
-	// List of bonds to configure and their settings
-	BondConfiguration []Bond `json:"bondConfiguration,omitempty"`
+	// Map of bond names to their configuration (links and mode)
+	BondConfiguration map[string]Bond `json:"bondConfiguration,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// Resources - Compute Resources required by this service (Limits/Requests).
@@ -183,7 +181,7 @@ type OVSExternalIDs struct {
 	OvnAvailabilityZones []string `json:"availability-zones,omitempty"`
 
 	// DEPRECATED: To be removed in the next API version
-        // Any value set to this field is ignored
+	// Any value set to this field is ignored
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=true
 	EnableChassisAsGateway *bool `json:"enable-chassis-as-gateway"`
@@ -191,10 +189,6 @@ type OVSExternalIDs struct {
 
 // Bond is used for configuring the bond-cni if needed on the deployment
 type Bond struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="bond0"
-	Name string `json:"name"`
-
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="active-backup"
 	Mode string `json:"mode,omitempty"`

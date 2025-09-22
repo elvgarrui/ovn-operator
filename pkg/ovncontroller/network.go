@@ -15,7 +15,7 @@ package ovncontroller
 import (
 	"context"
 	"fmt"
-	"strconv"
+	"unicode"
 
 	netattdefv1 "github.com/k8snetworkplumbingwg/network-attachment-definition-client/pkg/apis/k8s.cni.cncf.io/v1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -55,25 +55,34 @@ func CreateOrUpdateBondNADs(
 ) ([]string, error) {
 	var networkAttachments []string
 
-	for _, bond := range instance.Spec.BondConfiguration {
+	for bondName, bond := range instance.Spec.BondConfiguration {
 		var linkNames []string
-		for i, interfaceName := range bond.Links {
-			memberName := bond.Name + "-member" + strconv.Itoa(i)
-			linkNames = append(linkNames, memberName)
-			//(WIP) is nil ok or should I assign labels to it?
+		for _, interfaceName := range bond.Links {
+
+			var memberRunes []rune
+			for _, char := range interfaceName {
+				// Keep alphanumeric characters and the hyphen
+				if unicode.IsLetter(char) || unicode.IsNumber(char) || char == '-' {
+					memberRunes = append(memberRunes, char)
+				} else {
+					memberRunes = append(memberRunes, '-')
+				}
+			}
+			memberName := string(memberRunes)
 			nadConfig := defineNADSpecConfig(memberName, interfaceName)
 			err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, nil, memberName, nadConfig)
 			if err != nil {
 				return nil, err
 			}
 			networkAttachments = append(networkAttachments, memberName)
+			linkNames = append(linkNames, memberName)
 		}
-		mainBondNadConfig := defineMainBondNADSpecConfig(bond.Name, bond.Mode, linkNames)
-		err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, nil, bond.Name, mainBondNadConfig)
+		mainBondNadConfig := defineMainBondNADSpecConfig(bondName, bond.Mode, linkNames)
+		err := createOrUpdateNetworkAttachmentDefinition(ctx, h, instance, nil, bondName, mainBondNadConfig)
 		if err != nil {
 			return nil, err
 		}
-		networkAttachments = append(networkAttachments, bond.Name)
+		networkAttachments = append(networkAttachments, bondName)
 	}
 	return networkAttachments, nil
 }

@@ -150,9 +150,9 @@ func (in *OVNControllerSpecCore) DeepCopyInto(out *OVNControllerSpecCore) {
 	}
 	if in.BondConfiguration != nil {
 		in, out := &in.BondConfiguration, &out.BondConfiguration
-		*out = make([]Bond, len(*in))
-		for i := range *in {
-			(*in)[i].DeepCopyInto(&(*out)[i])
+		*out = make(map[string]Bond, len(*in))
+		for key, val := range *in {
+			(*out)[key] = *val.DeepCopy()
 		}
 	}
 	in.Resources.DeepCopyInto(&out.Resources)

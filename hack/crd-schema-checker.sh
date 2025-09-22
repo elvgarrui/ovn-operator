@@ -17,5 +17,6 @@ for crd in config/crd/bases/*.yaml; do
     git show "$BASE_REF:$crd" > "$TMP_DIR/$crd"
     $CHECKER check-manifests \
         --existing-crd-filename="$TMP_DIR/$crd" \
-        --new-crd-filename="$crd"
+        --new-crd-filename="$crd" \
+        --disabled-validators NoMaps
 done

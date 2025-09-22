@@ -503,6 +503,14 @@ func (r *OVNControllerReconciler) reconcileNormal(ctx context.Context, instance 
 		return ctrl.Result{}, err
 	}
 
+	// network to attach to
+	networkAttachmentsNoPhysNet := []string{}
+	if instance.Spec.NetworkAttachment != "" {
+		networkAttachments = append(networkAttachments, instance.Spec.NetworkAttachment)
+		networkAttachmentsNoPhysNet = append(networkAttachmentsNoPhysNet, instance.Spec.NetworkAttachment)
+	}
+	sort.Strings(networkAttachments)
+
 	// Create or update any bond configuration
 	bondNADs, err := ovncontroller.CreateOrUpdateBondNADs(ctx, helper, instance)
 	if err != nil {
@@ -517,14 +525,6 @@ func (r *OVNControllerReconciler) reconcileNormal(ctx context.Context, instance 
 	}
 
 	networkAttachments = append(networkAttachments, bondNADs...)
-
-	// network to attach to
-	networkAttachmentsNoPhysNet := []string{}
-	if instance.Spec.NetworkAttachment != "" {
-		networkAttachments = append(networkAttachments, instance.Spec.NetworkAttachment)
-		networkAttachmentsNoPhysNet = append(networkAttachmentsNoPhysNet, instance.Spec.NetworkAttachment)
-	}
-	sort.Strings(networkAttachments)
 
 	nadList := []netattdefv1.NetworkAttachmentDefinition{}
 	for _, netAtt := range networkAttachments {
