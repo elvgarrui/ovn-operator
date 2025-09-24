@@ -34,7 +34,8 @@ func getPhysicalNetworks(
 	// Need to pass sorted data as Map is unordered
 	nicMappings := maps.Keys(instance.Spec.NicMappings)
 	sort.Strings(nicMappings)
-	return strings.Join(nicMappings, " ")
+	bondConfiguration := maps.Keys(instance.Spec.BondConfiguration)
+	return strings.Join(nicMappings, " ") + " " + strings.Join(bondConfiguration, " ")
 }
 
 func getOVNControllerPods(
