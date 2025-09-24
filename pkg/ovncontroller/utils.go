@@ -35,6 +35,7 @@ func getPhysicalNetworks(
 	nicMappings := maps.Keys(instance.Spec.NicMappings)
 	sort.Strings(nicMappings)
 	bondConfiguration := maps.Keys(instance.Spec.BondConfiguration)
+	sort.Strings(bondConfiguration)
 	return strings.Join(nicMappings, " ") + " " + strings.Join(bondConfiguration, " ")
 }
 
