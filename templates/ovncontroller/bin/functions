@@ -22,6 +22,7 @@ OVNAvailabilityZones=${OVNAvailabilityZones:-""}
 EnableChassisAsGateway=${EnableChassisAsGateway:-true}
 PhysicalNetworks=${PhysicalNetworks:-""}
 OVNHostName=${OVNHostName:-""}
+OVSLogLevel=${OVSLogLevel:-"info"}
 DB_FILE=/etc/openvswitch/conf.db
 
 ovs_dir=/var/lib/openvswitch
@@ -49,6 +50,19 @@ function wait_for_ovsdb_server {
         fi
     done
 }
+
+function wait_for_ovn_controller {
+    while true; do
+        ovn-controller -V
+        if [ $? -eq 0 ]; then
+            break
+        else
+            echo "ovn-controller seems not be ready yet. Waiting..."
+            sleep 1
+        fi
+    done
+}
+
 
 # configure external-ids in OVS
 function configure_external_ids {

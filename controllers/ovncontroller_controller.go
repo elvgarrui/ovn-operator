@@ -943,6 +943,8 @@ func (r *OVNControllerReconciler) generateServiceConfigMaps(
 	// Add additional ConfigMap for extra configuration scripts
 	extraScriptsTemplateParameters := make(map[string]any)
 	extraScriptsTemplateParameters["OVNEncapTos"] = instance.Spec.ExternalIDS.OvnEncapTos
+	extraScriptsTemplateParameters["OVSLogLevel"] = instance.Spec.OVSLogLevel
+	extraScriptsTemplateParameters["OVNLogLevel"] = instance.Spec.OVNLogLevel
 
 	extraCms := []util.Template{
 		{
@@ -950,7 +952,8 @@ func (r *OVNControllerReconciler) generateServiceConfigMaps(
 			Namespace: instance.Namespace,
 			Type:      util.TemplateTypeNone,
 			AdditionalTemplate: map[string]string{
-				"configure-ovn.sh": "/ovncontroller/config/configure-ovn.sh",
+				"configure-ovn.sh":     "/ovncontroller/config/configure-ovn.sh",
+				"configure-logging.sh": "/ovncontroller/config/configure-logging.sh",
 			},
 			InstanceType:  instance.Kind,
 			Labels:        cmLabels,

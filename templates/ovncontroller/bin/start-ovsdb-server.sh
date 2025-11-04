@@ -26,4 +26,5 @@ ovsdb-server ${DB_FILE} \
     --remote=punix:/var/run/openvswitch/db.sock \
     --private-key=db:Open_vSwitch,SSL,private_key \
     --certificate=db:Open_vSwitch,SSL,certificate \
+    --verbose=${OVSLogLevel}
     --bootstrap-ca-cert=db:Open_vSwitch,SSL,ca_cert

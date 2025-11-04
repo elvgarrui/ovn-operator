@@ -15,6 +15,7 @@
 # under the License.
 
 source $(dirname $0)/functions
+
 wait_for_ovsdb_server
 
 # The order - first wait for db server, then set -ex - is important. Otherwise,
@@ -51,6 +52,9 @@ cleanup_flows_backup
 
 # Now, inform vswitchd that we are done.
 ovs-vsctl remove open_vswitch . other_config flow-restore-wait
+
+# Set the log level for ovs-vswitchd
+/usr/bin/ovs-appctl vlog/set ${OVSLogLevel}
 
 # This is container command script. Block it from exiting, otherwise k8s will
 # restart the container again.

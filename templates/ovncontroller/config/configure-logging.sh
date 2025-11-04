@@ -20,13 +20,13 @@
 
 source $(dirname $0)/../container-scripts/functions
 
-OVNEncapTos={{.OVNEncapTos}}
+OVSLogLevel={{.OVSLogLevel}}
+OVNLogLevel={{.OVNLogLevel}}
 
-function configure_ovn_external_ids {
-    ovs-vsctl set open . external-ids:ovn-encap-tos=${OVNEncapTos}
+function configure_logging {
+    /usr/bin/ovn-appctl vlog/set ${OVNLogLevel}
 }
 
-# Set the log level for ovs-vswitchd
-
-wait_for_ovsdb_server
-configure_ovn_external_ids
+# Set the log level for ovn-controller
+wait_for_ovn_controller
+configure_logging
